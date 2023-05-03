@@ -3,6 +3,7 @@ import scipy
 import numpy as np
 import pandas as pd
 import logging
+logging.basicConfig(level=logging.INFO)
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 import multiprocessing as mp
