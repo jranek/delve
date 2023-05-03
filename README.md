@@ -37,7 +37,7 @@ Then simply perform DELVE feature selection by,
 # Inputs:
 # adata: annotated data object (dimensions = cells x features)
 # k: number of nearest neighbors in the between-cell kNN affinity graph
-# num_subsamples: number of representative cellular neighborhoods subsampled via kernel herding sketching (see https://github.com/CompCy-lab/SketchKH)  
+# num_subsamples: number of representative cellular neighborhoods subsampled via kernel herding sketching (see https://dl.acm.org/doi/abs/10.1145/3535508.3545539, https://github.com/CompCy-lab/SketchKH)  
 # n_clusters: number of feature modules
 # n_random_state: number of random KMeans clustering initializations when identifying dynamic feature modules
 # random_state: random state parameter 
