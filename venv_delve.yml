@@ -1,0 +1,16 @@
+name: venv_delve
+channels:
+    - bioconda
+    - conda-forge
+    - defaults
+dependencies:
+    - anndata=0.7.6
+    - umap-learn=0.5.1
+    - pandas=1.1.5
+    - numpy=1.19.5
+    - scipy=1.7.1
+    - tqdm=4.63.0
+    - scikit-learn=0.23.2
+    - python>=3.6
+    - ipython=7.27.0
+    - notebook=6.4.0
