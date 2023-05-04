@@ -6,6 +6,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
+from sklearn.decomposition import PCA
 import multiprocessing as mp
 from kh import sketch
 from functools import partial
@@ -18,6 +19,7 @@ def delve_fs(adata = None,
             null_iterations = 1000,
             random_state = 0,
             n_random_state = 10,
+            n_pcs = None,
             n_jobs = -1):
     """Performs DELVE feature selection 
         - step 1: identifies dynamic seed features to construct a between-cell affinity graph according to dynamic cell state progression
@@ -38,6 +40,8 @@ def delve_fs(adata = None,
         random seed parameter
     n_random_state: int (default = 10)
         number of kmeans clustering initializations
+    n_pcs: int (default = None)
+        number of principal components to compute pairwise Euclidean distances for between-cell affinity graph construction. If None, uses adata.X
     n_jobs = int (default = -1)
         number of tasks
     ----------
@@ -61,11 +65,11 @@ def delve_fs(adata = None,
         logging.info(f'Step 1: identifying dynamic feature modules')
         sub_idx, _, delta_mean, modules  = seed_select(X = X, feature_names = feature_names, obs_names = obs_names, k = k, num_subsamples = num_subsamples,
                                                     n_clusters = n_clusters, null_iterations = null_iterations, random_state = random_state,
-                                                    n_random_state = n_random_state, n_jobs = n_jobs)
+                                                    n_random_state = n_random_state, n_pcs = n_pcs, n_jobs = n_jobs)
 
         logging.info(f'Step 2: performing feature selection')
         dyn_feats = np.asarray(modules.index[modules['cluster_id'] != 'static'])
-        selected_features = feature_select(X = X[sub_idx, :], feature_names = feature_names, dyn_feats = dyn_feats, k = k, n_jobs = n_jobs)
+        selected_features = feature_select(X = X[sub_idx, :], feature_names = feature_names, dyn_feats = dyn_feats, k = k, n_pcs = n_pcs, n_jobs = n_jobs)
         return delta_mean, modules, selected_features
 
     except TypeError: #no dynamic seed features were identified
@@ -80,6 +84,7 @@ def seed_select(X = None,
                 null_iterations = 1000,
                 random_state = 0,
                 n_random_state = 10,
+                n_pcs = None,
                 n_jobs = -1):
     """Identifies dynamic seed clusters
     Parameters
@@ -101,6 +106,8 @@ def seed_select(X = None,
         random seed parameter
     n_random_state: int (default = 10)
         number of kmeans clustering initializations
+    n_pcs: int (default = None)
+        number of principal components to compute pairwise Euclidean distances for between-cell affinity graph construction. If None, uses adata.X
     n_jobs = int (default = -1)
         number of tasks
     ----------
@@ -126,7 +133,7 @@ def seed_select(X = None,
     random_state_arr = np.random.randint(0, 1000000, n_random_state)
 
     logging.info(f'estimating feature dynamics')
-    sub_idx, adata_sub, delta_mean = delta_exp(X = X, feature_names = feature_names, obs_names = obs_names, k = k, num_subsamples = num_subsamples, random_state = random_state, n_jobs = n_jobs)
+    sub_idx, adata_sub, delta_mean = delta_exp(X = X, feature_names = feature_names, obs_names = obs_names, k = k, num_subsamples = num_subsamples, random_state = random_state, n_pcs = n_pcs, n_jobs = n_jobs)
 
     #identify modules
     mapping_df = pd.DataFrame(index = feature_names)
@@ -155,6 +162,7 @@ def feature_select(X = None,
                     feature_names = None,
                     dyn_feats = None,
                     k: int  = 10,
+                    n_pcs = None, 
                     n_jobs: int  = -1):
     """Ranks features along dynamic seed graph using the Laplacian score: https://papers.nips.cc/paper/2005/file/b5b03f06271f8917685d14cea7c6c50a-Paper.pdf
     Parameters
@@ -166,6 +174,8 @@ def feature_select(X = None,
         array containing features that are dynamically expressed. Can consider replacing this with a set of known regulators.
     k: int (default = 10)
         number of nearest neighbors for between cell affinity kNN graph construction
+    n_pcs: int (default = None)
+        number of principal components to compute pairwise Euclidean distances for between-cell affinity graph construction. If None, uses adata.X
     n_jobs = int (default = -1)
         number of tasks
     ----------
@@ -175,7 +185,7 @@ def feature_select(X = None,
     ----------
     """
     f_idx = np.where(np.isin(feature_names, dyn_feats) == True)[0] #index of feature names to construct seed graph
-    W = construct_affinity(X = X[:, f_idx], k = k, n_jobs = n_jobs) #constructs graph using dynamic seed features
+    W = construct_affinity(X = X[:, f_idx], k = k, n_pcs = n_pcs, n_jobs = n_jobs) #constructs graph using dynamic seed features
     scores = laplacian_score(X = X, W = W)
     selected_features = pd.DataFrame(scores, index = feature_names, columns = ['DELVE'])
     selected_features = selected_features.sort_values(by = 'DELVE', ascending = True)
@@ -188,6 +198,7 @@ def delta_exp(X = None,
             k: int = 10,
             num_subsamples: int = 1000,
             random_state: int = 0,
+            n_pcs = None,
             n_jobs: int = -1):
     """Estimates change in expression of features across representative cellular neighborhoods
     Parameters
@@ -203,6 +214,8 @@ def delta_exp(X = None,
         number of neighborhoods to subsample when estimating feature dynamics  
     random_state: int (default = 0)
         random seed parameter
+    n_pcs: int (default = None)
+        number of principal components for between-cell affinity graph computation. if None, uses adata.X to find pairwise Euclidean distances 
     n_jobs = int (default = -1)
         number of tasks
     ----------
@@ -216,7 +229,7 @@ def delta_exp(X = None,
     ----------
     """
     #construct between cell affinity kNN graph according to all profiled features
-    W = construct_affinity(X = X, k = k, n_jobs = -1)
+    W = construct_affinity(X = X, k = k, n_pcs = n_pcs, n_jobs = -1)
 
     #compute neighborhood means
     n_bool = W.astype(bool)
@@ -280,6 +293,7 @@ def laplacian_score(X = None,
 def construct_affinity(X = None,
                         k: int = 10,
                         radius: int = 3,
+                        n_pcs = None,
                         n_jobs: int = -1):
     """Computes between cell affinity knn graph using heat kernel
     Parameters
@@ -289,6 +303,8 @@ def construct_affinity(X = None,
         Number of nearest neighbors
     radius: int (default = 3)
         Neighbor to compute per cell distance for heat kernel bandwidth parameter
+    n_pcs: int (default = None)
+        number of principal components to compute pairwise Euclidean distances for between-cell affinity graph construction. If None, uses adata.X
     n_jobs: int (default = -1)
         Number of tasks  
     ----------
@@ -297,8 +313,15 @@ def construct_affinity(X = None,
         sparse symmetric matrix containing between cell similarity (dimensions = cells x cells)
     ----------
     """
+    if n_pcs is not None:
+        n_comp = min(n_pcs, X.shape[1])
+        pca_op = PCA(n_components=n_comp, random_state = 0)
+        X_ = pca_op.fit_transform(X)
+    else:
+        X_ = X.copy()
+
     # find kNN
-    knn_tree = NearestNeighbors(n_neighbors=k, algorithm='ball_tree', metric='euclidean', n_jobs=n_jobs).fit(X)
+    knn_tree = NearestNeighbors(n_neighbors=k, algorithm='ball_tree', metric='euclidean', n_jobs=n_jobs).fit(X_)
     dist, nn = knn_tree.kneighbors()  # dist = cells x knn (no self interactions)
 
     # transform distances using heat kernel
