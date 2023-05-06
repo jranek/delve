@@ -243,7 +243,7 @@ def delta_exp(X = None,
     subsampled_means = np.asarray(adata_sub.X)
     delta_mean = subsampled_means.reshape(-1, 1, subsampled_means.shape[1]) - subsampled_means.reshape(1, -1,subsampled_means.shape[1])
     delta_mean = delta_mean.sum(axis = 1) * (1 / (subsampled_means.shape[0] - 1))
-    delta_mean = pd.DataFrame(delta_mean[np.argsort(adata_sub.obs.index)], index = adata_sub.obs.index, columns = adata_sub.var_names) #resort according to subsampled indices
+    delta_mean = pd.DataFrame(delta_mean[np.argsort(adata_sub.obs.index)], index = adata_sub.obs.index[np.argsort(adata_sub.obs.index)], columns = adata_sub.var_names) #resort according to subsampled indices
 
     return sub_idx[0], adata_sub, delta_mean
 
