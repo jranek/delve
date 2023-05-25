@@ -24,7 +24,7 @@ cd delve
 ## Dependencies 
 * Python >= 3.6, anndata 0.7.6, numpy 1.19.5, scipy 1.7.1, tqdm 4.63.0, umap-learn 0.5.1, pandas 1.1.5, scikit-learn 0.23.2
 
-To install the necessary dependencies, you can create a conda environment using the provided yml file.
+To install the necessary dependencies, you can create a conda environment using the provided yml file. This installation should take less than one minute.
 ```
 conda env create -f venv_delve.yml
 ```
