@@ -8,19 +8,19 @@ from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 from sklearn.decomposition import PCA
 import multiprocessing as mp
-from kh import sketch
 from functools import partial
 from tqdm import tqdm
+from sketchKH import *
 
 def delve_fs(adata = None,
-            k = 10,
-            num_subsamples = 1000,
-            n_clusters = 5,
-            null_iterations = 1000,
-            random_state = 0,
-            n_random_state = 10,
+            k: int = 10,
+            num_subsamples: int = 1000,
+            n_clusters: int = 5,
+            null_iterations: int = 1000,
+            random_state: int = 0,
+            n_random_state: int = 10,
             n_pcs = None,
-            n_jobs = -1):
+            n_jobs: int = -1):
     """Performs DELVE feature selection 
         - step 1: identifies dynamic seed features to construct a between-cell affinity graph according to dynamic cell state progression
         - step 2: ranks features according to their total variation in signal along the approximate trajectory graph using the Laplacian score
@@ -78,14 +78,14 @@ def delve_fs(adata = None,
 def seed_select(X = None,
                 feature_names = None,
                 obs_names = None,
-                k = 10, 
-                num_subsamples = 1000,
-                n_clusters = 5,
-                null_iterations = 1000,
-                random_state = 0,
-                n_random_state = 10,
+                k: int = 10, 
+                num_subsamples: int = 1000,
+                n_clusters: int = 5,
+                null_iterations: int = 1000,
+                random_state: int = 0,
+                n_random_state: int = 10,
                 n_pcs = None,
-                n_jobs = -1):
+                n_jobs: int = -1):
     """Identifies dynamic seed clusters
     Parameters
     X: np.ndarray (default = None)
@@ -161,9 +161,9 @@ def seed_select(X = None,
 def feature_select(X = None,
                     feature_names = None,
                     dyn_feats = None,
-                    k: int  = 10,
+                    k: int = 10,
                     n_pcs = None, 
-                    n_jobs: int  = -1):
+                    n_jobs: int = -1):
     """Ranks features along dynamic seed graph using the Laplacian score: https://papers.nips.cc/paper/2005/file/b5b03f06271f8917685d14cea7c6c50a-Paper.pdf
     Parameters
     X: np.ndarray (default = None)
@@ -337,7 +337,7 @@ def construct_affinity(X = None,
     return W
 
 def heat_kernel(dist = None,
-                radius = 3):
+                radius: int = 3):
     """Transforms distances into weights using heat kernel
     Parameters
     dist: np.ndarray (default = None)
@@ -407,7 +407,7 @@ def _run_cluster(delta_mean, feature_names, n_clusters, null_iterations, state):
     ----------
     """     
     #perform clustering     
-    clusters = KMeans(n_clusters = n_clusters, random_state = state).fit_predict(delta_mean.transpose())
+    clusters = KMeans(n_clusters = n_clusters, random_state = state, init = 'k-means++', n_init='auto').fit_predict(delta_mean.transpose())
     feats = {i:feature_names[np.where(clusters == i)[0]] for i in np.unique(clusters)}
 
     #record feature-cluster assignment to find intersection across runs
