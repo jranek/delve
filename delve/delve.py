@@ -407,7 +407,7 @@ def _run_cluster(delta_mean, feature_names, n_clusters, null_iterations, state):
     ----------
     """     
     #perform clustering     
-    clusters = KMeans(n_clusters = n_clusters, random_state = state, init = 'k-means++', n_init='auto').fit_predict(delta_mean.transpose())
+    clusters = KMeans(n_clusters = n_clusters, random_state = state, init = 'k-means++', n_init = 10).fit_predict(delta_mean.transpose())
     feats = {i:feature_names[np.where(clusters == i)[0]] for i in np.unique(clusters)}
 
     #record feature-cluster assignment to find intersection across runs

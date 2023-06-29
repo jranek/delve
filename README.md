@@ -25,11 +25,6 @@ Alternatively, you can clone the git repository and install the necessary depend
 git clone https://github.com/jranek/delve.git
 ```
 
-Once you've cloned the repository, please change your working directory as, 
-```
-cd delve
-```
-
 You can then create the conda environment using the provided yml file. 
 
 ```
