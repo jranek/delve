@@ -6,7 +6,7 @@ with open('README.md', 'r') as f:
 setup(
     name='delve-fs',
     packages=['delve'],
-    version='0.1.1',
+    version='0.1.2',
     description='Feature selection for preserving biological trajectories from single-cell data',
     author='Jolene Ranek',
     author_email='ranekjs@gmail.com',
