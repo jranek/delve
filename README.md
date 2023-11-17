@@ -42,7 +42,7 @@ conda activate venv_delve
 ```
 
 ## Data access
-You can download all of the preprocessed single-cell datasets (`.h5ad` files) from the [Zenodo](https://zenodo.org/record/7883604) repository.
+You can download all of the preprocessed single-cell datasets (`.h5ad` files) from the [Zenodo](https://zenodo.org/records/10105826) repository.
 
 ## Example usage
 To perform trajectory-preserving feature selection with DELVE, first read in a preprocessed `.h5ad` object. This `.h5ad` object contains a sample profiled with a single-cell technology (i.e. protein iterative indirect immunofluorescence imaging data).
