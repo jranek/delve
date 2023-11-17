@@ -240,7 +240,7 @@ def delta_exp(X = None,
     sub_idx, adata_sub = sketch(anndata.AnnData(n_mean), num_subsamples = num_subsamples, frequency_seed = random_state, n_jobs = n_jobs)
 
     #compute the average pairwise change in the expression across all neighborhoods for all features
-    subsampled_means = np.asarray(adata_sub.X)
+    subsampled_means = np.asarray(adata_sub.X, dtype = np.float32)
     delta_mean = subsampled_means.reshape(-1, 1, subsampled_means.shape[1]) - subsampled_means.reshape(1, -1,subsampled_means.shape[1])
     delta_mean = delta_mean.sum(axis = 1) * (1 / (subsampled_means.shape[0] - 1))
     delta_mean = pd.DataFrame(delta_mean[np.argsort(adata_sub.obs.index)], index = adata_sub.obs.index[np.argsort(adata_sub.obs.index)], columns = adata_sub.var_names) #resort according to subsampled indices
