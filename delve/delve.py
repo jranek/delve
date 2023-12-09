@@ -49,7 +49,7 @@ def delve_fs(adata = None,
     delta_mean: pd.DataFrame
         dataframe containing average pairwise change in expression of all features across subsampled neighborhoods (dimensions = num_subsamples x features)
     modules: pd.DataFrame
-        dataframe containing feature-cluster assignment (dimensions = features x 1)
+        dataframe containing feature-cluster assignment and the permutation p-values (dimensions = features x 2)
     selected_features: pd.DataFrame
         dataframe containing ranked features and Laplacian scores following feature selection (dimensions = features x 1)
     ----------
@@ -119,7 +119,7 @@ def seed_select(X = None,
     delta_mean: pd.DataFrame
         dataframe containing average pairwise change in expression of all features across subsampled neighborhoods (dimensions = num_subsamples x features)
     modules: pd.DataFrame
-        dataframe containing feature-cluster assignment (dimensions = features x 1)
+        dataframe containing feature-cluster assignment and permutation p-values (dimensions = features x 2)
     ----------
     """                
     if n_jobs == -1:
@@ -137,14 +137,16 @@ def seed_select(X = None,
 
     #identify modules
     mapping_df = pd.DataFrame(index = feature_names)
+    pval_df = pd.DataFrame(index = feature_names)
     dyn_feats = []
     random_state_idx = []
     for result in tqdm(p.imap(partial(_run_cluster, delta_mean, feature_names, n_clusters, null_iterations), random_state_arr), 
-                            total = n_random_state, desc = 'clustering features and performing gene-wise permutation testing'):        
+                            total = n_random_state, desc = 'clustering features and performing feature-wise permutation testing'):        
         if result is not None:
             mapping_df = pd.concat([mapping_df, result[0]], axis = 1)
-            dyn_feats.append(result[1])
-            random_state_idx.append(result[2])
+            pval_df = pd.concat([pval_df, result[1]], axis = 1)
+            dyn_feats.append(result[2])
+            random_state_idx.append(result[3])
 
     if len(dyn_feats) == 0:
         logging.warning(f'No feature clusters have a dynamic variance greater than null. Consider changing the number of clusters or the subsampling size.')
@@ -153,7 +155,7 @@ def seed_select(X = None,
         if len(dyn_feats) == 0:
             logging.warning(f'No features were considered dynamically-expressed across runs.')
         else:
-            modules = _annotate_clusters(mapping_df = mapping_df, dyn_feats = dyn_feats, random_state_idx = random_state_idx[-1])  
+            modules = _annotate_clusters(mapping_df = mapping_df, dyn_feats = dyn_feats, pval_df = pval_df, random_state_idx = random_state_idx[-1])  
             n_dynamic_clusters = len(np.unique(modules['cluster_id'][modules['cluster_id'] != 'static']))
             logging.info(f'identified {n_dynamic_clusters} dynamic cluster(s)')
             return sub_idx, adata_sub, delta_mean, modules
@@ -398,10 +400,10 @@ def _run_cluster(delta_mean, feature_names, n_clusters, null_iterations, state):
     Returns
     mapping_df: pd.DataFrame
         dataframe containing feature to cluster assignments
+    pval_df: pd.DataFrame
+        dataframe containing the permutation p-values 
     dyn_feats: np.ndarray
         array containing features identified as dynamically-expressed following permutation testing
-    delta_mean: np.ndarray
-        array containing average pairwise change in expression of all features across subsampled neighborhoods (dimensions = num_subsamples x features)
     state: int
         random seed parameter
     ----------
@@ -419,20 +421,24 @@ def _run_cluster(delta_mean, feature_names, n_clusters, null_iterations, state):
     #compute variance-based permutation test
     seed_var = np.array([np.var(delta_mean.iloc[:, np.isin(feature_names, feats[i])], axis = 1, ddof = 1).mean() for i in range(n_clusters)])
     null_var = []
+    pval_df = pd.DataFrame(index = feature_names, columns = [state])
     for f in range(0, len(feats)):
         null_var_ = np.array([np.var(delta_mean.iloc[:, np.isin(feature_names, np.random.choice(feature_names, len(feats[f]), replace = False))], axis = 1, ddof=1).mean() for i in range(null_iterations)])
+        permutation_pval = 1 - (len(np.where(seed_var[f] > null_var_)[0]) + 1) / (null_iterations + 1)
+        pval_df.loc[feats[f]] = permutation_pval
         null_var.append(np.mean(null_var_))
 
     dynamic_id = np.where(seed_var > np.array(null_var))[0] #select dynamic clusters over null variance threshold
 
     if len(dynamic_id) != 0:
         dyn_feats = np.concatenate([v for k, v in feats.items() if k in np.array(list(feats.keys()))[dynamic_id]])
-        return mapping_df, dyn_feats, state
+        return mapping_df, pval_df, dyn_feats, state
 
 def _annotate_clusters(mapping_df = None,
                         dyn_feats = None,
+                        pval_df = None,
                         random_state_idx: int = None):
-    """Annotates clusters as dynamic or static according to gene-wise permutation testing within clusters
+    """Annotates clusters as dynamic or static according to feature-wise permutation testing within clusters
     Parameters
     mapping_df: pd.DataFrame
         dataframe containing feature-cluster ids from KMeans clustering across random trials (dimensions = features x n_random_state)
@@ -443,7 +449,7 @@ def _annotate_clusters(mapping_df = None,
     ----------
     Returns
     modules: pd.DataFrame
-        dataframe containing annotated feature-cluster assignment (dimensions = features x 1)
+        dataframe containing annotated feature-cluster assignment and permutation p-value assignment (dimensions = features x 2)
     ----------
     """
     cluster_id = np.unique(mapping_df.values)
@@ -456,4 +462,5 @@ def _annotate_clusters(mapping_df = None,
     modules = pd.Categorical(pd.Series(mapping_df.loc[:, random_state_idx].astype('str')).map(cats))
     modules = pd.DataFrame(modules, index = mapping_df.index, columns = ['cluster_id'])
     modules[~np.isin(modules.index, dyn_feats)] = 'static'
+    modules['cluster_permutation_pval'] = pval_df.median(1) #median across all random trials
     return modules
