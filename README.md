@@ -69,7 +69,7 @@ Then simply perform DELVE feature selection by,
     
 # Returns:
 # delta_mean: average pairwise change in expression across prototypical cellular neighborhoods (dimensions = num_subsamples x features)
-# modules: dataframe containing feature-cluster assignment (dimensions = features x 1)
+# modules: dataframe containing feature-cluster assignments and permutation p-values (dimensions = features x 2)
 # ranked_features: ranked set of features that best preserve the local trajectory structure (dimensions = features x 1)
 # -----------------------
 from delve import *
