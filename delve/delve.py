@@ -49,7 +49,7 @@ def delve_fs(adata = None,
     delta_mean: pd.DataFrame
         dataframe containing average pairwise change in expression of all features across subsampled neighborhoods (dimensions = num_subsamples x features)
     modules: pd.DataFrame
-        dataframe containing feature-cluster assignment and the permutation p-values (dimensions = features x 2)
+        dataframe containing feature-cluster assignments and permutation p-values (dimensions = features x 2)
     selected_features: pd.DataFrame
         dataframe containing ranked features and Laplacian scores following feature selection (dimensions = features x 1)
     ----------
@@ -119,7 +119,7 @@ def seed_select(X = None,
     delta_mean: pd.DataFrame
         dataframe containing average pairwise change in expression of all features across subsampled neighborhoods (dimensions = num_subsamples x features)
     modules: pd.DataFrame
-        dataframe containing feature-cluster assignment and permutation p-values (dimensions = features x 2)
+        dataframe containing feature-cluster assignments and permutation p-values (dimensions = features x 2)
     ----------
     """                
     if n_jobs == -1:
@@ -449,7 +449,7 @@ def _annotate_clusters(mapping_df = None,
     ----------
     Returns
     modules: pd.DataFrame
-        dataframe containing annotated feature-cluster assignment and permutation p-value assignment (dimensions = features x 2)
+        dataframe containing annotated feature-cluster assignment and permutation p-values (dimensions = features x 2)
     ----------
     """
     cluster_id = np.unique(mapping_df.values)
