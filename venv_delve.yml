@@ -14,4 +14,4 @@ dependencies:
     - tqdm
     - pip
     - pip:
-        - sketchKH==0.1.0
+        - sketchKH==0.1.1
