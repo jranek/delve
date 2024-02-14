@@ -13,7 +13,7 @@ For a comparison of alternative feature selection methods and the overall benchm
 
 ## Installation
 Dependencies 
-* Python >= 3.6, sketchKH == 0.1.0, anndata >= 0.7.6, numpy >= 1.19.5, scipy >= 1.7.1, pandas >= 1.1.5, umap-learn == 0.5.1, scikit-learn >= 0.23.2, tqdm 
+* Python >= 3.6, sketchKH == 0.1.1, anndata >= 0.7.6, numpy >= 1.19.5, scipy >= 1.7.1, pandas >= 1.1.5, umap-learn == 0.5.1, scikit-learn >= 0.23.2, tqdm 
 
 You can install the package and necessary dependencies with `pip` by,
 ```
@@ -42,7 +42,7 @@ conda activate venv_delve
 ```
 
 ## Data access
-You can download all of the preprocessed single-cell datasets (`.h5ad` files) from the [Zenodo](https://zenodo.org/records/10105826) repository.
+You can download all of the preprocessed single-cell datasets (`.h5ad` files) from the [Zenodo](https://zenodo.org/records/10534873) repository.
 
 ## Example usage
 To perform trajectory-preserving feature selection with DELVE, first read in a preprocessed `.h5ad` object. This `.h5ad` object contains a sample profiled with a single-cell technology (i.e. protein iterative indirect immunofluorescence imaging data).
