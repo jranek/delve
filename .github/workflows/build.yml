@@ -23,21 +23,21 @@ jobs:
         with:
           fetch-depth: 0
           
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Dependencies
-      run:  pip install . 
+      - name: Dependencies
+        run:  pip install . 
 
-    - name: Test
-      run: |
-          python -c "\
-          import pandas as pd 
-          import numpy as np
-          import anndata
-          from delve import *
-          adata = anndata.read_h5ad(os.path.join('data', 'adata_RPE.h5ad'))
-          delta_mean, modules, ranked_features = delve_fs(adata = adata, n_pcs = 50, k = 10, num_subsamples = 1000, n_clusters = 5, random_state = 0, n_jobs = -1, null_iterations=1000)
-          "
+      - name: Test
+        run: |
+            python -c "\
+            import pandas as pd 
+            import numpy as np
+            import anndata
+            from delve import *
+            adata = anndata.read_h5ad('data/adata_RPE.h5ad')
+            delta_mean, modules, ranked_features = delve_fs(adata = adata, n_pcs = 50, k = 10, num_subsamples = 1000, n_clusters = 5, random_state = 0, n_jobs = -1, null_iterations=1000)
+            "
