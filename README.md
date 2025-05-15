@@ -13,7 +13,7 @@ For a comparison of alternative feature selection methods and the overall benchm
 
 ## Installation
 Dependencies 
-* Python >= 3.6, sketchKH == 0.1.1, anndata >= 0.7.6, numpy >= 1.19.5, scipy >= 1.7.1, pandas >= 1.1.5, umap-learn == 0.5.1, scikit-learn >= 0.23.2, tqdm 
+* Python == 3.9, sketchKH == 0.1.2, anndata >= 0.7.6, numpy == 1.26.4, scipy >= 1.7.1, pandas >= 1.5.2, umap-learn == 0.5.1, scikit-learn >= 0.23.2, scanpy == 1.8.1, tqdm 
 
 You can install the package and necessary dependencies with `pip` by,
 ```
