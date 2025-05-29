@@ -12,7 +12,7 @@ setup(
     author_email='ranekjs@gmail.com',
     url='https://github.com/jranek/delve',
     license='MIT',
-    python_requires='3.9',
+    python_requires='==3.9',
     long_description=long_description,
     long_description_content_type = 'text/markdown',
     classifiers=[
