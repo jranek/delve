@@ -405,7 +405,8 @@ def _run_cluster(delta_mean, feature_names, n_clusters, null_iterations, state):
         random seed parameter
     ----------
     """     
-    #perform clustering     
+    #perform clustering
+    rng = np.random.RandomState(state)     
     clusters = KMeans(n_clusters = n_clusters, random_state = state, init = 'k-means++', n_init = 10).fit_predict(delta_mean.transpose())
     feats = {i:feature_names[np.where(clusters == i)[0]] for i in np.unique(clusters)}
 
@@ -416,11 +417,20 @@ def _run_cluster(delta_mean, feature_names, n_clusters, null_iterations, state):
     mapping_df = pd.DataFrame(mapping, index = feature_names, columns = [state])
 
     #compute variance-based permutation test
-    seed_var = np.array([np.var(delta_mean.iloc[:, np.isin(feature_names, feats[i])], axis = 1, ddof = 1).mean() for i in range(n_clusters)])
+    delta_arr = delta_mean.to_numpy()
+    cluster_idx = {i: np.where(np.isin(feature_names, feats[i]))[0] for i in feats}
+    seed_var = np.array([delta_arr[:, cluster_idx[i]].var(axis=1, ddof=1).mean() for i in range(n_clusters)])
+
     null_var = []
     pval_df = pd.DataFrame(index = feature_names, columns = [state])
     for f in range(0, len(feats)):
-        null_var_ = np.array([np.var(delta_mean.iloc[:, np.isin(feature_names, np.random.choice(feature_names, len(feats[f]), replace = False))], axis = 1, ddof=1).mean() for i in range(null_iterations)])
+        k = len(feats[f])
+        null_var_ = np.empty(null_iterations)
+        for i in range(0, null_iterations):
+            sel = rng.choice(feature_names, k, replace = False)
+            idx = np.where(np.isin(feature_names, sel))[0]
+            null_var_[i] = delta_arr[:, idx].var(axis=1, ddof=1).mean()
+
         permutation_pval = 1 - (len(np.where(seed_var[f] > null_var_)[0]) + 1) / (null_iterations + 1)
         pval_df.loc[feats[f]] = permutation_pval
         null_var.append(np.mean(null_var_))
