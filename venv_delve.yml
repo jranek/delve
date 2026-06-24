@@ -6,15 +6,14 @@ channels:
 dependencies:
     - anndata>=0.7.6
     - umap-learn=0.5.1
-    - numpy=1.26.4
+    - numpy>=1.26.4,<2.0
     - scipy>=1.7.1
     - scikit-learn>=0.23.2
-    - matplotlib-base=3.7.1
-    - python=3.9
+    - matplotlib-base>=3.7.1
+    - python>=3.9
+    - scanpy>=1.8.1
+    - seaborn>=0.12.2
     - tqdm
     - pip
     - pip:
-        - scanpy==1.8.1
-        - sketchKH==0.1.2
-        - pandas==1.5.2
-        - matplotlib==3.6.0
+        - sketchKH>=0.1.4
