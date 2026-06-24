@@ -5,6 +5,8 @@ Dynamic selection of locally covarying features
 
 DELVE is an unsupervised feature selection method for identifying a representative subset of dynamically-expressed molecular features that recapitulate cellular trajectories from single-cell data (e.g. single-cell RNA sequencing, protein iterative immunofluorescence imaging). In contrast to previous work, DELVE uses a bottom-up approach to mitigate the effect of unwanted sources of feature variation confounding inference, and instead models cell states from dynamic feature modules that constitute core regulatory complexes. For more details on the method, please read the associated paper: [Ranek JS, Stallaert W, Milner JJ, Redick M, Wolff SC, Beltran AS, Stanley N, and Purvis JE. DELVE: feature selection for preserving biological trajectories in single-cell data. _Nature Communications_. 2024](https://www.nature.com/articles/s41467-024-46773-z).
 
+* Last Updated : June 24, 2026
+
 <p>
   <img src="https://github.com/jranek/delve/blob/main/pipeline.png?raw=True" />
 </p>
@@ -13,7 +15,7 @@ For a comparison of alternative feature selection methods and the overall benchm
 
 ## Installation
 Dependencies 
-* Python == 3.9, sketchKH == 0.1.2, anndata >= 0.7.6, numpy == 1.26.4, scipy >= 1.7.1, pandas >= 1.5.2, umap-learn == 0.5.1, scikit-learn >= 0.23.2, scanpy == 1.8.1, tqdm 
+* Python >= 3.9, sketchKH >= 0.1.4, anndata >= 0.7.6, numpy >=1.26.4,<2.0, scipy >= 1.7.1, umap-learn == 0.5.1, scikit-learn >= 0.23.2, scanpy >=1.8.1, tqdm 
 
 You can install the package and necessary dependencies with `pip` by,
 ```
