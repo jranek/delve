@@ -372,17 +372,13 @@ def parse_input(adata: anndata.AnnData):
         array of cell names   
     ----------
     """
-    try:
-        if isinstance(adata, anndata.AnnData):
-            X = adata.X.copy()
-        if isinstance(X, scipy.sparse.csr_matrix):
-            X = np.asarray(X.todense())
+    X = adata.X.copy()
+    if sparse.issparse(X):
+        X = X.toarray()
 
-        feature_names = np.asarray(adata.var_names)
-        obs_names = np.asarray(adata.obs_names)
-        return X, feature_names, obs_names
-    except NameError:
-        return None
+    feature_names = np.asarray(adata.var_names)
+    obs_names = np.asarray(adata.obs_names)
+    return X, feature_names, obs_names
 
 def _run_cluster(delta_mean, feature_names, n_clusters, null_iterations, state):
     """Multiprocessing function for identifying feature modules and performing gene-wise permutation testing
