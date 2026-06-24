@@ -10,6 +10,7 @@ from sklearn.decomposition import PCA
 import multiprocessing as mp
 from functools import partial
 from tqdm import tqdm
+from scipy import sparse
 from sketchKH import *
 
 def delve_fs(adata = None,
@@ -124,8 +125,8 @@ def seed_select(X = None,
     """                
     if n_jobs == -1:
         n_jobs = mp.cpu_count()
-    else:
-        n_jobs == mp.cpu_count() + 1 + n_jobs
+    elif n_jobs < -1:
+        n_jobs = mp.cpu_count() + 1 + n_jobs
 
     p = mp.Pool(n_jobs)
     
