@@ -2,42 +2,48 @@ name: Build and Test
 
 on:
   push:
+    branches: ["main", "tests"]
+  pull_request:
+    branches: ["main"]
 
 permissions:
-  contents: read # to fetch code (actions/checkout)
+  contents: read
 
 jobs:
-  build_wheels:
-    name: ${{ matrix.os }} Wheels
+  test:
+    name: ${{ matrix.os }} - Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
-      # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.9']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
 
     steps:
       - name: Checkout ${{ github.repository }}
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
           
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Dependencies
+      - name: Install package
         run:  pip install . 
 
       - name: Test
         run: |
-            python -c "\
+            python -c "
             import pandas as pd 
             import numpy as np
             import anndata
             from delve import *
             adata = anndata.read_h5ad('data/adata_RPE.h5ad')
-            delta_mean, modules, ranked_features = delve_fs(adata = adata, n_pcs = 50, k = 10, num_subsamples = 1000, n_clusters = 5, random_state = 0, n_jobs = -1, null_iterations=1000)
+            delta_mean, modules, ranked_features = delve_fs(adata = adata, n_pcs = 50, k = 10, num_subsamples = 1000, n_clusters = 5, random_state = 0, n_jobs = 8, null_iterations=1000)
+            assert len(modules['cluster_id'].unique()) == 2
+            dyn_features = ['Int_MeanEdge_cycB1_cell', 'Int_Med_cycB1_cell', 'Int_Med_cycB1_cyto',
+                            'Int_Med_CDK2_nuc', 'Int_Med_Skp2_nuc', 'Int_Med_cycA_nuc',
+                            'Int_Med_cycB1_nuc', 'Int_Med_pH2AX_nuc', 'Int_Med_pRB_nuc',
+                            'Int_Std_PCNA_nuc', 'Int_Med_cycB1_ring', 'Int_Intg_DNA_nuc']
+            assert len(set(modules[modules['cluster_id'] == 'dynamic'].index).difference(set(dyn_features))) == 0
             "

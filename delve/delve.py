@@ -10,6 +10,7 @@ from sklearn.decomposition import PCA
 import multiprocessing as mp
 from functools import partial
 from tqdm import tqdm
+from scipy import sparse
 from sketchKH import *
 
 def delve_fs(adata = None,
@@ -124,8 +125,8 @@ def seed_select(X = None,
     """                
     if n_jobs == -1:
         n_jobs = mp.cpu_count()
-    else:
-        n_jobs == mp.cpu_count() + 1 + n_jobs
+    elif n_jobs < -1:
+        n_jobs = mp.cpu_count() + 1 + n_jobs
 
     p = mp.Pool(n_jobs)
     
@@ -243,8 +244,9 @@ def delta_exp(X = None,
 
     #compute the average pairwise change in the expression across all neighborhoods for all features
     subsampled_means = np.asarray(adata_sub.X, dtype = np.float32)
-    delta_mean = subsampled_means.reshape(-1, 1, subsampled_means.shape[1]) - subsampled_means.reshape(1, -1,subsampled_means.shape[1])
-    delta_mean = delta_mean.sum(axis = 1) * (1 / (subsampled_means.shape[0] - 1))
+    n_sub = subsampled_means.shape[0]
+    col_sum = subsampled_means.sum(axis = 0, keepdims = True)
+    delta_mean = (n_sub * subsampled_means - col_sum) * (1 / (n_sub - 1))
     delta_mean = pd.DataFrame(delta_mean[np.argsort(adata_sub.obs.index)], index = adata_sub.obs.index[np.argsort(adata_sub.obs.index)], columns = adata_sub.var_names) #resort according to subsampled indices
 
     return sub_idx[0], adata_sub, delta_mean
@@ -263,32 +265,26 @@ def laplacian_score(X = None,
         array containing laplacian score for all features (dimensions = features)
     ----------
     """
-    n_samples, n_features = X.shape
-    
-    #compute degree matrix
-    D = np.array(W.sum(axis = 1))
-    D = scipy.sparse.diags(np.transpose(D), [0])
-
-    #compute graph laplacian
-    L = D - W.toarray()
-
-    #ones vector: 1 = [1,···,1]'
-    ones = np.ones((n_samples,n_features))
+    #compute degree vector
+    d = np.asarray(W.sum(axis = 1)).ravel()
 
     #feature vector: fr = [fr1,...,frm]'
     fr = X.copy()
 
-    #construct fr_t = fr - (fr' D 1/ 1' D 1) 1
-    numerator = np.matmul(np.matmul(np.transpose(fr), D.toarray()), ones)
-    denomerator = np.matmul(np.matmul(np.transpose(ones), D.toarray()), ones)
-    ratio = numerator / denomerator
-    ratio = ratio[:, 0]
-    ratio = np.tile(ratio, (n_samples, 1))
+    #construct fr_t = fr - (fr' D 1 / 1' D 1) 1
+    total_deg = d.sum()
+    weighted_sum = fr.T @ d
+    ratio = weighted_sum / total_deg
     fr_t = fr - ratio
 
     #compute laplacian score Lr = fr_t' L fr_t / fr_t' D fr_t
-    l_score = np.matmul(np.matmul(np.transpose(fr_t), L), fr_t) / np.matmul(np.dot(np.transpose(fr_t), D.toarray()), fr_t)
-    l_score = np.diag(l_score)
+    Dfr = d[:, None] * fr_t
+    Wfr = W @ fr_t
+    Lfr = Dfr - Wfr
+
+    numerator = np.einsum('ij,ij->j', fr_t, Lfr)
+    denominator = np.einsum('ij,ij->j', fr_t, Dfr)
+    l_score = numerator / denominator
 
     return l_score
 
@@ -371,17 +367,13 @@ def parse_input(adata: anndata.AnnData):
         array of cell names   
     ----------
     """
-    try:
-        if isinstance(adata, anndata.AnnData):
-            X = adata.X.copy()
-        if isinstance(X, scipy.sparse.csr_matrix):
-            X = np.asarray(X.todense())
+    X = adata.X.copy()
+    if sparse.issparse(X):
+        X = X.toarray()
 
-        feature_names = np.asarray(adata.var_names)
-        obs_names = np.asarray(adata.obs_names)
-        return X, feature_names, obs_names
-    except NameError:
-        return None
+    feature_names = np.asarray(adata.var_names)
+    obs_names = np.asarray(adata.obs_names)
+    return X, feature_names, obs_names
 
 def _run_cluster(delta_mean, feature_names, n_clusters, null_iterations, state):
     """Multiprocessing function for identifying feature modules and performing gene-wise permutation testing
@@ -408,7 +400,8 @@ def _run_cluster(delta_mean, feature_names, n_clusters, null_iterations, state):
         random seed parameter
     ----------
     """     
-    #perform clustering     
+    #perform clustering
+    rng = np.random.RandomState(state)     
     clusters = KMeans(n_clusters = n_clusters, random_state = state, init = 'k-means++', n_init = 10).fit_predict(delta_mean.transpose())
     feats = {i:feature_names[np.where(clusters == i)[0]] for i in np.unique(clusters)}
 
@@ -419,11 +412,20 @@ def _run_cluster(delta_mean, feature_names, n_clusters, null_iterations, state):
     mapping_df = pd.DataFrame(mapping, index = feature_names, columns = [state])
 
     #compute variance-based permutation test
-    seed_var = np.array([np.var(delta_mean.iloc[:, np.isin(feature_names, feats[i])], axis = 1, ddof = 1).mean() for i in range(n_clusters)])
+    delta_arr = delta_mean.to_numpy()
+    cluster_idx = {i: np.where(np.isin(feature_names, feats[i]))[0] for i in feats}
+    seed_var = np.array([delta_arr[:, cluster_idx[i]].var(axis=1, ddof=1).mean() for i in range(n_clusters)])
+
     null_var = []
     pval_df = pd.DataFrame(index = feature_names, columns = [state])
     for f in range(0, len(feats)):
-        null_var_ = np.array([np.var(delta_mean.iloc[:, np.isin(feature_names, np.random.choice(feature_names, len(feats[f]), replace = False))], axis = 1, ddof=1).mean() for i in range(null_iterations)])
+        k = len(feats[f])
+        null_var_ = np.empty(null_iterations)
+        for i in range(0, null_iterations):
+            sel = rng.choice(feature_names, k, replace = False)
+            idx = np.where(np.isin(feature_names, sel))[0]
+            null_var_[i] = delta_arr[:, idx].var(axis=1, ddof=1).mean()
+
         permutation_pval = 1 - (len(np.where(seed_var[f] > null_var_)[0]) + 1) / (null_iterations + 1)
         pval_df.loc[feats[f]] = permutation_pval
         null_var.append(np.mean(null_var_))
