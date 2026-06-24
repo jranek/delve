@@ -244,8 +244,9 @@ def delta_exp(X = None,
 
     #compute the average pairwise change in the expression across all neighborhoods for all features
     subsampled_means = np.asarray(adata_sub.X, dtype = np.float32)
-    delta_mean = subsampled_means.reshape(-1, 1, subsampled_means.shape[1]) - subsampled_means.reshape(1, -1,subsampled_means.shape[1])
-    delta_mean = delta_mean.sum(axis = 1) * (1 / (subsampled_means.shape[0] - 1))
+    n_sub = subsampled_means.shape[0]
+    col_sum = subsampled_means.sum(axis = 0, keepdims = True)
+    delta_mean = (n_sub * subsampled_means - col_sum) * (1 / (n_sub - 1))
     delta_mean = pd.DataFrame(delta_mean[np.argsort(adata_sub.obs.index)], index = adata_sub.obs.index[np.argsort(adata_sub.obs.index)], columns = adata_sub.var_names) #resort according to subsampled indices
 
     return sub_idx[0], adata_sub, delta_mean
