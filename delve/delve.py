@@ -264,32 +264,26 @@ def laplacian_score(X = None,
         array containing laplacian score for all features (dimensions = features)
     ----------
     """
-    n_samples, n_features = X.shape
-    
-    #compute degree matrix
-    D = np.array(W.sum(axis = 1))
-    D = scipy.sparse.diags(np.transpose(D), [0])
-
-    #compute graph laplacian
-    L = D - W.toarray()
-
-    #ones vector: 1 = [1,···,1]'
-    ones = np.ones((n_samples,n_features))
+    #compute degree vector
+    d = np.asarray(W.sum(axis = 1)).ravel()
 
     #feature vector: fr = [fr1,...,frm]'
     fr = X.copy()
 
-    #construct fr_t = fr - (fr' D 1/ 1' D 1) 1
-    numerator = np.matmul(np.matmul(np.transpose(fr), D.toarray()), ones)
-    denomerator = np.matmul(np.matmul(np.transpose(ones), D.toarray()), ones)
-    ratio = numerator / denomerator
-    ratio = ratio[:, 0]
-    ratio = np.tile(ratio, (n_samples, 1))
+    #construct fr_t = fr - (fr' D 1 / 1' D 1) 1
+    total_deg = d.sum()
+    weighted_sum = fr.T @ d
+    ratio = weighted_sum / total_deg
     fr_t = fr - ratio
 
     #compute laplacian score Lr = fr_t' L fr_t / fr_t' D fr_t
-    l_score = np.matmul(np.matmul(np.transpose(fr_t), L), fr_t) / np.matmul(np.dot(np.transpose(fr_t), D.toarray()), fr_t)
-    l_score = np.diag(l_score)
+    Dfr = d[:, None] * fr_t
+    Wfr = W @ fr_t
+    Lfr = Dfr - Wfr
+
+    numerator = np.einsum('ij,ij->j', fr_t, Lfr)
+    denominator = np.einsum('ij,ij->j', fr_t, Dfr)
+    l_score = numerator / denominator
 
     return l_score
 
